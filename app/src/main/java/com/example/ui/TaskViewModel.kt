@@ -70,56 +70,50 @@ class TaskViewModel(
         _searchQuery.debounce(300),
         _dateFilter
     ) { args: Array<Any?> ->
-        var result = args[0] as List<Task>
         val status = args[1] as TaskFilterStatus
         val priority = args[2] as TaskFilterPriority
         val sort = args[3] as TaskSortOption
         val search = args[4] as String
         val dateFilterMs = args[5] as Long?
 
-        // 1. Status Filter
-        result = when (status) {
-            TaskFilterStatus.ALL -> result
-            TaskFilterStatus.ACTIVE -> result.filter { !it.isCompleted }
-            TaskFilterStatus.COMPLETED -> result.filter { it.isCompleted }
-        }
+        val filterCalendar = dateFilterMs?.let { java.util.Calendar.getInstance().apply { timeInMillis = it } }
+        val filterYear = filterCalendar?.get(java.util.Calendar.YEAR)
+        val filterDayOfYear = filterCalendar?.get(java.util.Calendar.DAY_OF_YEAR)
+        val taskCalendar = if (dateFilterMs != null) java.util.Calendar.getInstance() else null
 
-        // 2. Priority Filter
-        result = when (priority) {
-            TaskFilterPriority.ALL -> result
-            TaskFilterPriority.LOW -> result.filter { it.priority == TaskPriority.LOW }
-            TaskFilterPriority.MEDIUM -> result.filter { it.priority == TaskPriority.MEDIUM }
-            TaskFilterPriority.HIGH -> result.filter { it.priority == TaskPriority.HIGH }
-        }
+        // Single pass filtering
+        val filtered = (args[0] as List<Task>).filter { task ->
+            // 1. Status Filter
+            if (status == TaskFilterStatus.ACTIVE && task.isCompleted) return@filter false
+            if (status == TaskFilterStatus.COMPLETED && !task.isCompleted) return@filter false
 
-        // 3. Search Query
-        if (search.isNotBlank()) {
-            result = result.filter { 
-                it.title.contains(search, ignoreCase = true) || 
-                it.notes.contains(search, ignoreCase = true) 
+            // 2. Priority Filter
+            if (priority != TaskFilterPriority.ALL && task.priority.name != priority.name) return@filter false
+
+            // 3. Search Query
+            if (search.isNotBlank() && !(task.title.contains(search, ignoreCase = true) || task.notes.contains(search, ignoreCase = true))) {
+                return@filter false
             }
-        }
 
-        // 4. Date Filter
-        if (dateFilterMs != null) {
-            val filterCalendar = java.util.Calendar.getInstance().apply { timeInMillis = dateFilterMs }
-            val filterYear = filterCalendar.get(java.util.Calendar.YEAR)
-            val filterDayOfYear = filterCalendar.get(java.util.Calendar.DAY_OF_YEAR)
-
-            val taskCalendar = java.util.Calendar.getInstance()
-
-            result = result.filter { task ->
+            // 4. Date Filter
+            if (taskCalendar != null && filterYear != null && filterDayOfYear != null) {
                 val due = task.dueDate
-                if (due != null) {
+                if (due == null) {
+                    return@filter false
+                } else {
                     taskCalendar.timeInMillis = due
-                    taskCalendar.get(java.util.Calendar.YEAR) == filterYear && 
-                        taskCalendar.get(java.util.Calendar.DAY_OF_YEAR) == filterDayOfYear
-                } else false
+                    if (taskCalendar.get(java.util.Calendar.YEAR) != filterYear || 
+                        taskCalendar.get(java.util.Calendar.DAY_OF_YEAR) != filterDayOfYear) {
+                        return@filter false
+                    }
+                }
             }
+
+            true
         }
 
         // 5. Sorting & Ordering (Uncompleted tasks at top, then sort option)
-        result.sortedWith { t1, t2 ->
+        filtered.sortedWith { t1, t2 ->
             // First level: uncompleted vs completed (active tasks on top)
             if (t1.isCompleted != t2.isCompleted) {
                 if (!t1.isCompleted) -1 else 1
@@ -151,26 +145,33 @@ class TaskViewModel(
 
     // Task statistics
     val taskStats: StateFlow<TaskStats> = combine(repository.allTasks, _dateFilter) { all, dateFilterMs ->
-        var list = all
-        if (dateFilterMs != null) {
-            val filterCalendar = java.util.Calendar.getInstance().apply { timeInMillis = dateFilterMs }
-            val filterYear = filterCalendar.get(java.util.Calendar.YEAR)
-            val filterDayOfYear = filterCalendar.get(java.util.Calendar.DAY_OF_YEAR)
+        val filterCalendar = dateFilterMs?.let { java.util.Calendar.getInstance().apply { timeInMillis = it } }
+        val filterYear = filterCalendar?.get(java.util.Calendar.YEAR)
+        val filterDayOfYear = filterCalendar?.get(java.util.Calendar.DAY_OF_YEAR)
+        val taskCalendar = if (dateFilterMs != null) java.util.Calendar.getInstance() else null
 
-            val taskCalendar = java.util.Calendar.getInstance()
+        var total = 0
+        var completed = 0
 
-            list = list.filter { task ->
+        for (task in all) {
+            var matchesDate = true
+            if (taskCalendar != null && filterYear != null && filterDayOfYear != null) {
                 val due = task.dueDate
-                if (due != null) {
+                if (due == null) {
+                    matchesDate = false
+                } else {
                     taskCalendar.timeInMillis = due
-                    taskCalendar.get(java.util.Calendar.YEAR) == filterYear && 
-                        taskCalendar.get(java.util.Calendar.DAY_OF_YEAR) == filterDayOfYear
-                } else false
+                    if (taskCalendar.get(java.util.Calendar.YEAR) != filterYear || 
+                        taskCalendar.get(java.util.Calendar.DAY_OF_YEAR) != filterDayOfYear) {
+                        matchesDate = false
+                    }
+                }
+            }
+            if (matchesDate) {
+                total++
+                if (task.isCompleted) completed++
             }
         }
-        
-        val total = list.size
-        val completed = list.count { it.isCompleted }
         val active = total - completed
         TaskStats(total = total, completed = completed, active = active)
     }.flowOn(Dispatchers.Default).stateIn(

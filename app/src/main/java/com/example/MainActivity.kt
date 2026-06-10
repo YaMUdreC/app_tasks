@@ -283,9 +283,9 @@ fun MainScreen(
                 items(tasks, key = { it.id }) { task ->
                     TaskItemCard(
                         task = task,
-                        onToggleComplete = remember(task.id) { { viewModel.toggleTaskCompletion(task) } },
-                        onDelete = remember(task.id) { { viewModel.deleteTask(task) } },
-                        onEdit = remember(task.id) { {
+                        onToggleComplete = remember(task) { { viewModel.toggleTaskCompletion(task) } },
+                        onDelete = remember(task) { { viewModel.deleteTask(task) } },
+                        onEdit = remember(task) { {
                             selectedTaskForEdit = task
                             showAddEditSheet = true
                         } },
