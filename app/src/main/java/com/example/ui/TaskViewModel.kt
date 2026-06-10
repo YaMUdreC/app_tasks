@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -59,12 +61,13 @@ class TaskViewModel(
     }
 
     // Reactive COMBINED Flow of tasks based on filters, sorting, and search
+    @OptIn(FlowPreview::class)
     val filteredTasks: StateFlow<List<Task>> = combine(
         repository.allTasks,
         _statusFilter,
         _priorityFilter,
         _sortOption,
-        _searchQuery,
+        _searchQuery.debounce(300),
         _dateFilter
     ) { args: Array<Any?> ->
         var result = args[0] as List<Task>

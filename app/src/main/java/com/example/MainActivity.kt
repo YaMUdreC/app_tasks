@@ -283,12 +283,12 @@ fun MainScreen(
                 items(tasks, key = { it.id }) { task ->
                     TaskItemCard(
                         task = task,
-                        onToggleComplete = { viewModel.toggleTaskCompletion(task) },
-                        onDelete = { viewModel.deleteTask(task) },
-                        onEdit = {
+                        onToggleComplete = remember(task.id) { { viewModel.toggleTaskCompletion(task) } },
+                        onDelete = remember(task.id) { { viewModel.deleteTask(task) } },
+                        onEdit = remember(task.id) { {
                             selectedTaskForEdit = task
                             showAddEditSheet = true
-                        },
+                        } },
                         dateFormat = itemDateFormat
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -472,6 +472,14 @@ fun CozySearchBar(
     onQueryChange: (String) -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
+    var text by remember { mutableStateOf(query) }
+
+    LaunchedEffect(query) {
+        if (query.isEmpty() && text.isNotEmpty()) {
+            text = ""
+        }
+    }
+
     val bgCol = if (isDark) CozyDarkSurface else Color.White
     val borderCol = if (isDark) Color.White.copy(alpha = 0.05f) else NaturalHighBg
     val textCol = if (isDark) CharcoalWalnutDark else NaturalText
@@ -503,7 +511,7 @@ fun CozySearchBar(
             modifier = Modifier.weight(1f),
             contentAlignment = Alignment.CenterStart
         ) {
-            if (query.isEmpty()) {
+            if (text.isEmpty()) {
                 Text(
                     text = "Search tasks...",
                     color = textCol.copy(alpha = 0.4f),
@@ -513,8 +521,11 @@ fun CozySearchBar(
             }
             
             BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
+                value = text,
+                onValueChange = { 
+                    text = it 
+                    onQueryChange(it) 
+                },
                 singleLine = true,
                 textStyle = TextStyle(
                     color = textCol,
@@ -529,9 +540,12 @@ fun CozySearchBar(
             )
         }
         
-        if (query.isNotEmpty()) {
+        if (text.isNotEmpty()) {
             IconButton(
-                onClick = { onQueryChange("") },
+                onClick = { 
+                    text = ""
+                    onQueryChange("") 
+                },
                 modifier = Modifier.size(24.dp)
             ) {
                 Icon(
