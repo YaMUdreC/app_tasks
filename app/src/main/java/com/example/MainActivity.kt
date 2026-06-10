@@ -9,6 +9,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -98,6 +100,13 @@ fun MainScreen(
 
     var showAddEditSheet by remember { mutableStateOf(false) }
     var selectedTaskForEdit by remember { mutableStateOf<Task?>(null) }
+
+    val onToggleComplete: (Task) -> Unit = remember { { t -> viewModel.toggleTaskCompletion(t) } }
+    val onDelete: (Task) -> Unit = remember { { t -> viewModel.deleteTask(t) } }
+    val onEdit: (Task) -> Unit = remember { { t ->
+        selectedTaskForEdit = t
+        showAddEditSheet = true
+    } }
 
     val context = LocalContext.current
 
@@ -266,7 +275,7 @@ fun MainScreen(
                             fontWeight = FontWeight.Normal,
                             fontFamily = FontFamily.Serif,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.animateContentSize()
+                            modifier = Modifier.animateContentSize(animationSpec = tween(150))
                         )
                     }
                 }
@@ -283,12 +292,14 @@ fun MainScreen(
                 items(tasks, key = { it.id }) { task ->
                     TaskItemCard(
                         task = task,
-                        onToggleComplete = remember(task) { { viewModel.toggleTaskCompletion(task) } },
-                        onDelete = remember(task) { { viewModel.deleteTask(task) } },
-                        onEdit = remember(task) { {
-                            selectedTaskForEdit = task
-                            showAddEditSheet = true
-                        } },
+                        modifier = Modifier.animateItem(
+                            fadeInSpec = tween(150),
+                            fadeOutSpec = tween(150),
+                            placementSpec = spring(stiffness = Spring.StiffnessHigh)
+                        ),
+                        onToggleComplete = onToggleComplete,
+                        onDelete = onDelete,
+                        onEdit = onEdit,
                         dateFormat = itemDateFormat
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -574,6 +585,11 @@ fun CozyFilterRow(
     val context = LocalContext.current
     val filterDateFormat = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
     
+    val filterCal = remember(currentDateFilter) {
+        currentDateFilter?.let { Calendar.getInstance().apply { timeInMillis = it } }
+    }
+    val taskCal = remember { Calendar.getInstance() }
+    
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -583,7 +599,7 @@ fun CozyFilterRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            TaskFilterStatus.values().forEach { status ->
+            TaskFilterStatus.entries.forEach { status ->
                 val isSelected = currentStatus == status
                 val label = when (status) {
                     TaskFilterStatus.ALL -> "all"
@@ -654,7 +670,7 @@ fun CozyFilterRow(
                     modifier = Modifier.padding(end = 4.dp)
                 )
                 
-                TaskFilterPriority.values().forEach { priority ->
+                TaskFilterPriority.entries.forEach { priority ->
                     val isSelected = currentPriority == priority
                     val label = when (priority) {
                         TaskFilterPriority.ALL -> "all"
@@ -772,10 +788,11 @@ fun CozyFilterRow(
             }
 
             recentDates.forEach { recentDateMillis ->
-                val isSelected = currentDateFilter != null && Calendar.getInstance().apply { timeInMillis = recentDateMillis }.get(Calendar.DAY_OF_YEAR) == 
-                                 Calendar.getInstance().apply { timeInMillis = currentDateFilter }.get(Calendar.DAY_OF_YEAR) &&
-                                 Calendar.getInstance().apply { timeInMillis = recentDateMillis }.get(Calendar.YEAR) ==
-                                 Calendar.getInstance().apply { timeInMillis = currentDateFilter }.get(Calendar.YEAR)
+                val isSelected = filterCal != null && run {
+                    taskCal.timeInMillis = recentDateMillis
+                    taskCal.get(Calendar.DAY_OF_YEAR) == filterCal.get(Calendar.DAY_OF_YEAR) &&
+                    taskCal.get(Calendar.YEAR) == filterCal.get(Calendar.YEAR)
+                }
 
                 val recentBgCol = if (isSelected) {
                     if (isDark) CozyDarkPrimary else TerracottaClay
@@ -873,9 +890,10 @@ fun CozyFilterRow(
 @Composable
 fun TaskItemCard(
     task: Task,
-    onToggleComplete: () -> Unit,
-    onDelete: () -> Unit,
-    onEdit: () -> Unit,
+    modifier: Modifier = Modifier,
+    onToggleComplete: (Task) -> Unit,
+    onDelete: (Task) -> Unit,
+    onEdit: (Task) -> Unit,
     dateFormat: SimpleDateFormat
 ) {
     val isDark = isSystemInDarkTheme()
@@ -954,7 +972,7 @@ fun TaskItemCard(
     val contentAlpha = if (task.isCompleted) 0.5f else 1.0f
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .testTag("task_card_${task.id}")
             .border(
@@ -962,7 +980,7 @@ fun TaskItemCard(
                 color = borderCol,
                 shape = RoundedCornerShape(24.dp)
             )
-            .clickable { onEdit() },
+            .clickable { onEdit(task) },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -973,39 +991,43 @@ fun TaskItemCard(
                 .padding(horizontal = 18.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Elegant circular checkbox
+            // Elegant circular checkbox with standard 48dp touch target
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .padding(end = 14.dp)
-                    .size(24.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
-                    .background(
-                        if (task.isCompleted) {
-                            if (isDark) CozyDarkPrimary else MossGreen
-                        } else Color.Transparent
-                    )
-                    .border(
-                        width = 2.dp,
-                        color = if (task.isCompleted) Color.Transparent else ringColor,
-                        shape = CircleShape
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onToggleComplete
-                    )
+                    .clickable { onToggleComplete(task) }
                     .testTag("task_checkbox_${task.id}")
             ) {
-                if (task.isCompleted) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Completed",
-                        tint = if (isDark) CozyDarkSurface else NaturalBackground,
-                        modifier = Modifier.size(14.dp)
-                    )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (task.isCompleted) {
+                                if (isDark) CozyDarkPrimary else MossGreen
+                            } else Color.Transparent
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = if (task.isCompleted) Color.Transparent else ringColor,
+                            shape = CircleShape
+                        )
+                ) {
+                    if (task.isCompleted) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Completed",
+                            tint = if (isDark) CozyDarkSurface else NaturalBackground,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.width(4.dp))
 
             // Task texts
             Column(
@@ -1113,7 +1135,7 @@ fun TaskItemCard(
 
             // Simple delete trigger
             IconButton(
-                onClick = onDelete,
+                onClick = { onDelete(task) },
                 modifier = Modifier
                     .size(34.dp)
                     .testTag("delete_task_button_${task.id}")
@@ -1264,7 +1286,7 @@ fun AddEditTaskContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TaskPriority.values().forEach { level ->
+                TaskPriority.entries.forEach { level ->
                     val isSelected = priority == level
                     val color = when (level) {
                         TaskPriority.LOW -> MossGreen

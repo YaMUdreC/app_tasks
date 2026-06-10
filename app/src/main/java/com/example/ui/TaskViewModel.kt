@@ -219,7 +219,7 @@ class TaskViewModel(
 
     // DB Operations
     fun saveTask(title: String, notes: String, priority: TaskPriority, dueDate: Long?) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.insert(
                 Task(
                     title = title.trim(),
@@ -232,19 +232,19 @@ class TaskViewModel(
     }
 
     fun updateTask(task: Task) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.update(task)
         }
     }
 
     fun toggleTaskCompletion(task: Task) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.update(task.copy(isCompleted = !task.isCompleted))
         }
     }
 
     fun deleteTask(task: Task) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.delete(task)
         }
     }
