@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -25,7 +26,10 @@ enum class TaskSortOption {
     PRIORITY_DESC, DUE_DATE_ASC, CREATION_DESC
 }
 
-class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
+class TaskViewModel(
+    private val repository: TaskRepository,
+    private val prefs: SharedPreferences
+) : ViewModel() {
 
     private val _statusFilter = MutableStateFlow(TaskFilterStatus.ALL)
     val statusFilter: StateFlow<TaskFilterStatus> = _statusFilter
@@ -39,15 +43,34 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
+    private val _dateFilter = MutableStateFlow<Long?>(null)
+    val dateFilter: StateFlow<Long?> = _dateFilter
+
+    private val _recentDates = MutableStateFlow<List<Long>>(emptyList())
+    val recentDates: StateFlow<List<Long>> = _recentDates
+
+    init {
+        val saved = prefs.getString("recent_dates", null)
+        if (!saved.isNullOrBlank()) {
+            _recentDates.value = saved.split(",").mapNotNull { it.toLongOrNull() }
+        }
+    }
+
     // Reactive COMBINED Flow of tasks based on filters, sorting, and search
     val filteredTasks: StateFlow<List<Task>> = combine(
         repository.allTasks,
         _statusFilter,
         _priorityFilter,
         _sortOption,
-        _searchQuery
-    ) { tasks, status, priority, sort, search ->
-        var result = tasks
+        _searchQuery,
+        _dateFilter
+    ) { args: Array<Any?> ->
+        var result = args[0] as List<Task>
+        val status = args[1] as TaskFilterStatus
+        val priority = args[2] as TaskFilterPriority
+        val sort = args[3] as TaskSortOption
+        val search = args[4] as String
+        val dateFilterMs = args[5] as Long?
 
         // 1. Status Filter
         result = when (status) {
@@ -72,7 +95,23 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             }
         }
 
-        // 4. Sorting & Ordering (Uncompleted tasks at top, then sort option)
+        // 4. Date Filter
+        if (dateFilterMs != null) {
+            val filterCalendar = java.util.Calendar.getInstance().apply { timeInMillis = dateFilterMs }
+            val filterYear = filterCalendar.get(java.util.Calendar.YEAR)
+            val filterDayOfYear = filterCalendar.get(java.util.Calendar.DAY_OF_YEAR)
+
+            result = result.filter { task ->
+                val due = task.dueDate
+                if (due != null) {
+                    val taskCalendar = java.util.Calendar.getInstance().apply { timeInMillis = due }
+                    taskCalendar.get(java.util.Calendar.YEAR) == filterYear && 
+                        taskCalendar.get(java.util.Calendar.DAY_OF_YEAR) == filterDayOfYear
+                } else false
+            }
+        }
+
+        // 5. Sorting & Ordering (Uncompleted tasks at top, then sort option)
         result.sortedWith { t1, t2 ->
             // First level: uncompleted vs completed (active tasks on top)
             if (t1.isCompleted != t2.isCompleted) {
@@ -131,6 +170,27 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         _searchQuery.value = query
     }
 
+    fun setDateFilter(date: Long?) {
+        _dateFilter.value = date
+    }
+
+    fun addRecentDate(date: Long) {
+        val current = _recentDates.value.toMutableList()
+        val calDate = java.util.Calendar.getInstance().apply { timeInMillis = date }
+        
+        current.removeAll { 
+            val r = java.util.Calendar.getInstance().apply { timeInMillis = it }
+            r.get(java.util.Calendar.YEAR) == calDate.get(java.util.Calendar.YEAR) &&
+            r.get(java.util.Calendar.DAY_OF_YEAR) == calDate.get(java.util.Calendar.DAY_OF_YEAR)
+        }
+        current.add(date)
+        if (current.size > 3) {
+            current.removeAt(0)
+        }
+        _recentDates.value = current
+        prefs.edit().putString("recent_dates", current.joinToString(",")).apply()
+    }
+
     // DB Operations
     fun saveTask(title: String, notes: String, priority: TaskPriority, dueDate: Long?) {
         viewModelScope.launch {
@@ -170,11 +230,14 @@ data class TaskStats(
     val active: Int = 0
 )
 
-class TaskViewModelFactory(private val repository: TaskRepository) : ViewModelProvider.Factory {
+class TaskViewModelFactory(
+    private val repository: TaskRepository,
+    private val prefs: SharedPreferences
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TaskViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return TaskViewModel(repository) as T
+            return TaskViewModel(repository, prefs) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
