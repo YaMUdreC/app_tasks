@@ -1,0 +1,6 @@
+{
+  "name": "Serene Tasks",
+  "description": "A minimalist, cozy, and soft-toned personal todo and task tracker with task prioritizing and offline local database persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
