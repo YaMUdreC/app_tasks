@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 enum class TaskFilterStatus {
@@ -101,10 +103,12 @@ class TaskViewModel(
             val filterYear = filterCalendar.get(java.util.Calendar.YEAR)
             val filterDayOfYear = filterCalendar.get(java.util.Calendar.DAY_OF_YEAR)
 
+            val taskCalendar = java.util.Calendar.getInstance()
+
             result = result.filter { task ->
                 val due = task.dueDate
                 if (due != null) {
-                    val taskCalendar = java.util.Calendar.getInstance().apply { timeInMillis = due }
+                    taskCalendar.timeInMillis = due
                     taskCalendar.get(java.util.Calendar.YEAR) == filterYear && 
                         taskCalendar.get(java.util.Calendar.DAY_OF_YEAR) == filterDayOfYear
                 } else false
@@ -136,7 +140,7 @@ class TaskViewModel(
                 }
             }
         }
-    }.stateIn(
+    }.flowOn(Dispatchers.Default).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -150,10 +154,12 @@ class TaskViewModel(
             val filterYear = filterCalendar.get(java.util.Calendar.YEAR)
             val filterDayOfYear = filterCalendar.get(java.util.Calendar.DAY_OF_YEAR)
 
+            val taskCalendar = java.util.Calendar.getInstance()
+
             list = list.filter { task ->
                 val due = task.dueDate
                 if (due != null) {
-                    val taskCalendar = java.util.Calendar.getInstance().apply { timeInMillis = due }
+                    taskCalendar.timeInMillis = due
                     taskCalendar.get(java.util.Calendar.YEAR) == filterYear && 
                         taskCalendar.get(java.util.Calendar.DAY_OF_YEAR) == filterDayOfYear
                 } else false
@@ -164,7 +170,7 @@ class TaskViewModel(
         val completed = list.count { it.isCompleted }
         val active = total - completed
         TaskStats(total = total, completed = completed, active = active)
-    }.stateIn(
+    }.flowOn(Dispatchers.Default).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = TaskStats()

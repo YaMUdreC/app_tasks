@@ -94,6 +94,8 @@ fun MainScreen(
     val sortOption by viewModel.sortOption.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
+    val itemDateFormat = remember { SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.getDefault()) }
+
     var showAddEditSheet by remember { mutableStateOf(false) }
     var selectedTaskForEdit by remember { mutableStateOf<Task?>(null) }
 
@@ -286,7 +288,8 @@ fun MainScreen(
                         onEdit = {
                             selectedTaskForEdit = task
                             showAddEditSheet = true
-                        }
+                        },
+                        dateFormat = itemDateFormat
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -858,9 +861,9 @@ fun TaskItemCard(
     task: Task,
     onToggleComplete: () -> Unit,
     onDelete: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    dateFormat: SimpleDateFormat
 ) {
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.getDefault()) }
     val isDark = isSystemInDarkTheme()
     
     // Custom color mapping based on priority & state
