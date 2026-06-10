@@ -104,192 +104,191 @@ fun MainScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 20.dp)
+                .imePadding(),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
         ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val isDark = isSystemInDarkTheme()
-                val todayString = remember {
-                    SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
-                }
-                Column {
-                    Text(
-                        text = "Today",
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.SansSerif,
-                        color = if (isDark) CharcoalWalnutDark else NaturalHeading,
-                        letterSpacing = (-1).sp,
-                        modifier = Modifier.testTag("app_title")
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = todayString.uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.SansSerif,
-                        color = if (isDark) CozyDarkPrimary else NaturalMuted,
-                        letterSpacing = 2.sp
-                    )
-                }
-
-                // Sorting dropdown
-                var showSortMenu by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(
-                        onClick = { showSortMenu = true },
-                        modifier = Modifier
-                            .background(Color.Transparent)
-                            .size(40.dp)
-                            .testTag("sort_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = "Sort tasks",
-                            tint = if (isDark) CozyDarkPrimary else NaturalMuted,
-                            modifier = Modifier.size(26.dp)
+            item {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isDark = isSystemInDarkTheme()
+                    val todayString = remember {
+                        SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
+                    }
+                    Column {
+                        Text(
+                            text = "Today",
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = FontFamily.SansSerif,
+                            color = if (isDark) CharcoalWalnutDark else NaturalHeading,
+                            letterSpacing = (-1).sp,
+                            modifier = Modifier.testTag("app_title")
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = todayString.uppercase(),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.SansSerif,
+                            color = if (isDark) CozyDarkPrimary else NaturalMuted,
+                            letterSpacing = 2.sp
                         )
                     }
 
-                    DropdownMenu(
-                        expanded = showSortMenu,
-                        onDismissRequest = { showSortMenu = false },
-                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("By priority (High first)") },
-                            onClick = {
-                                viewModel.setSortOption(TaskSortOption.PRIORITY_DESC)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("By nearest due date") },
-                            onClick = {
-                                viewModel.setSortOption(TaskSortOption.DUE_DATE_ASC)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("By newest created") },
-                            onClick = {
-                                viewModel.setSortOption(TaskSortOption.CREATION_DESC)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        )
-                    }
-                }
-            }
+                    // Sorting dropdown
+                    var showSortMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(
+                            onClick = { showSortMenu = true },
+                            modifier = Modifier
+                                .background(Color.Transparent)
+                                .size(40.dp)
+                                .testTag("sort_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Sort tasks",
+                                tint = if (isDark) CozyDarkPrimary else NaturalMuted,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
 
-            // Stats Card
-            CozyStatsCard(stats = stats)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Search Bar
-            CozySearchBar(
-                query = searchQuery,
-                onQueryChange = { viewModel.setSearchQuery(it) }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Filters selector
-            CozyFilterRow(
-                currentStatus = statusFilter,
-                onStatusChange = { viewModel.setStatusFilter(it) },
-                currentPriority = priorityFilter,
-                onPriorityChange = { viewModel.setPriorityFilter(it) },
-                currentDateFilter = dateFilter,
-                onDateFilterChange = { viewModel.setDateFilter(it) },
-                recentDates = recentDates,
-                onRecentDateAdded = { viewModel.addRecentDate(it) }
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Task List Header / Summary
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${tasks.size} tasks shown",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = FontFamily.SansSerif,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                )
-
-                if (stats.completed > 0) {
-                    Text(
-                        text = "keep on keeping on",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Normal,
-                        fontFamily = FontFamily.Serif,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.animateContentSize()
-                    )
-                }
-            }
-
-            // List of Tasks
-            Box(modifier = Modifier.weight(1f).imePadding()) {
-                if (tasks.isEmpty()) {
-                    CozyEmptyState(
-                        isFiltered = searchQuery.isNotEmpty() || priorityFilter != TaskFilterPriority.ALL || statusFilter != TaskFilterStatus.ALL || dateFilter != null
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 100.dp)
-                    ) {
-                        items(tasks, key = { it.id }) { task ->
-                            TaskItemCard(
-                                task = task,
-                                onToggleComplete = { viewModel.toggleTaskCompletion(task) },
-                                onDelete = { viewModel.deleteTask(task) },
-                                onEdit = {
-                                    selectedTaskForEdit = task
-                                    showAddEditSheet = true
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false },
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("By priority (High first)") },
+                                onClick = {
+                                    viewModel.setSortOption(TaskSortOption.PRIORITY_DESC)
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("By nearest due date") },
+                                onClick = {
+                                    viewModel.setSortOption(TaskSortOption.DUE_DATE_ASC)
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.DateRange,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("By newest created") },
+                                onClick = {
+                                    viewModel.setSortOption(TaskSortOption.CREATION_DESC)
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             )
                         }
                     }
+                }
+
+                // Stats Card
+                CozyStatsCard(stats = stats)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Search Bar
+                CozySearchBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.setSearchQuery(it) }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Filters selector
+                CozyFilterRow(
+                    currentStatus = statusFilter,
+                    onStatusChange = { viewModel.setStatusFilter(it) },
+                    currentPriority = priorityFilter,
+                    onPriorityChange = { viewModel.setPriorityFilter(it) },
+                    currentDateFilter = dateFilter,
+                    onDateFilterChange = { viewModel.setDateFilter(it) },
+                    recentDates = recentDates,
+                    onRecentDateAdded = { viewModel.addRecentDate(it) }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Task List Header / Summary
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${tasks.size} tasks shown",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = FontFamily.SansSerif,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                    )
+
+                    if (stats.completed > 0) {
+                        Text(
+                            text = "keep on keeping on",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal,
+                            fontFamily = FontFamily.Serif,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.animateContentSize()
+                        )
+                    }
+                }
+            }
+
+            // List of Tasks
+            if (tasks.isEmpty()) {
+                item {
+                    CozyEmptyState(
+                        isFiltered = searchQuery.isNotEmpty() || priorityFilter != TaskFilterPriority.ALL || statusFilter != TaskFilterStatus.ALL || dateFilter != null
+                    )
+                }
+            } else {
+                items(tasks, key = { it.id }) { task ->
+                    TaskItemCard(
+                        task = task,
+                        onToggleComplete = { viewModel.toggleTaskCompletion(task) },
+                        onDelete = { viewModel.deleteTask(task) },
+                        onEdit = {
+                            selectedTaskForEdit = task
+                            showAddEditSheet = true
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
         }

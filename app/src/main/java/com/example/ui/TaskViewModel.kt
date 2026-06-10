@@ -143,9 +143,25 @@ class TaskViewModel(
     )
 
     // Task statistics
-    val taskStats: StateFlow<TaskStats> = repository.allTasks.combine(filteredTasks) { all, filtered ->
-        val total = all.size
-        val completed = all.count { it.isCompleted }
+    val taskStats: StateFlow<TaskStats> = combine(repository.allTasks, _dateFilter) { all, dateFilterMs ->
+        var list = all
+        if (dateFilterMs != null) {
+            val filterCalendar = java.util.Calendar.getInstance().apply { timeInMillis = dateFilterMs }
+            val filterYear = filterCalendar.get(java.util.Calendar.YEAR)
+            val filterDayOfYear = filterCalendar.get(java.util.Calendar.DAY_OF_YEAR)
+
+            list = list.filter { task ->
+                val due = task.dueDate
+                if (due != null) {
+                    val taskCalendar = java.util.Calendar.getInstance().apply { timeInMillis = due }
+                    taskCalendar.get(java.util.Calendar.YEAR) == filterYear && 
+                        taskCalendar.get(java.util.Calendar.DAY_OF_YEAR) == filterDayOfYear
+                } else false
+            }
+        }
+        
+        val total = list.size
+        val completed = list.count { it.isCompleted }
         val active = total - completed
         TaskStats(total = total, completed = completed, active = active)
     }.stateIn(
