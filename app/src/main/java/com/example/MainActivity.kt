@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    contentWindowInsets = WindowInsets.safeDrawing
+                    contentWindowInsets = WindowInsets.systemBars
                 ) { innerPadding ->
                     MainScreen(
                         viewModel = viewModel,
@@ -257,7 +257,7 @@ fun MainScreen(
             }
 
             // List of Tasks
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).imePadding()) {
                 if (tasks.isEmpty()) {
                     CozyEmptyState(
                         isFiltered = searchQuery.isNotEmpty() || priorityFilter != TaskFilterPriority.ALL || statusFilter != TaskFilterStatus.ALL
@@ -1010,6 +1010,7 @@ fun AddEditTaskContent(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
+            .imePadding()
             .padding(horizontal = 24.dp)
             .padding(top = 4.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
