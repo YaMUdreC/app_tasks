@@ -23,6 +23,10 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # 4.5. Generate the missing debug keystore file automatically
+      - name: Create Debug Keystore
+        run: keytool -genkey -v -keystore debug.keystore -keyalgorithm RSA -keysize 2048 -validity 10000 -alias androiddebugkey -keypass android -storepass android -dname "CN=Android Debug,O=Android,C=US"
+
       # 5. Compile the app into a debug APK
       - name: Build Debug APK
         run: ./gradlew assembleDebug
