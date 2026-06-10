@@ -10,8 +10,10 @@ jobs:
         with:
           java-version: '17'
           distribution: 'zulu'
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+      - name: Convert line endings and make gradlew executable
+        run: |
+          dos2unix ./gradlew || sed -i 's/\r$//' ./gradlew
+          chmod +x ./gradlew
       - name: Build Debug APK
         run: ./gradlew assembleDebug
       - name: Upload APK Artifact
