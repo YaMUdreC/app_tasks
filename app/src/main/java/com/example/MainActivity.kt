@@ -693,7 +693,7 @@ fun TaskItemCard(
     onDelete: () -> Unit,
     onEdit: () -> Unit
 ) {
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.getDefault()) }
     val isDark = isSystemInDarkTheme()
     
     // Custom color mapping based on priority & state
@@ -998,7 +998,7 @@ fun AddEditTaskContent(
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
-    val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy 'at' h:mm a", Locale.getDefault()) }
     val isDark = isSystemInDarkTheme()
 
     var title by remember { mutableStateOf(taskToEdit?.title ?: "") }
@@ -1131,17 +1131,25 @@ fun AddEditTaskContent(
                     if (dueDate != null) {
                         calendar.timeInMillis = dueDate!!
                     }
-                    DatePickerDialog(
+                    android.app.DatePickerDialog(
                         context,
-                        { _: DatePicker, year: Int, month: Int, dayOfMonth: Int ->
-                            val selectedCal = Calendar.getInstance()
-                            selectedCal.set(Calendar.YEAR, year)
-                            selectedCal.set(Calendar.MONTH, month)
-                            selectedCal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                            selectedCal.set(Calendar.HOUR_OF_DAY, 23)
-                            selectedCal.set(Calendar.MINUTE, 59)
-                            selectedCal.set(Calendar.SECOND, 59)
-                            dueDate = selectedCal.timeInMillis
+                        { _, year, month, dayOfMonth ->
+                            android.app.TimePickerDialog(
+                                context,
+                                { _, hourOfDay, minute ->
+                                    val selectedCal = Calendar.getInstance()
+                                    selectedCal.set(Calendar.YEAR, year)
+                                    selectedCal.set(Calendar.MONTH, month)
+                                    selectedCal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                    selectedCal.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                    selectedCal.set(Calendar.MINUTE, minute)
+                                    selectedCal.set(Calendar.SECOND, 0)
+                                    dueDate = selectedCal.timeInMillis
+                                },
+                                calendar.get(Calendar.HOUR_OF_DAY),
+                                calendar.get(Calendar.MINUTE),
+                                false
+                            ).show()
                         },
                         calendar.get(Calendar.YEAR),
                         calendar.get(Calendar.MONTH),
