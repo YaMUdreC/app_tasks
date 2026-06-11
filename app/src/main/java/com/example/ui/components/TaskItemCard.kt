@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -114,19 +116,14 @@ fun TaskItemCard(
 
     val contentAlpha = if (task.isCompleted) 0.5f else 1.0f
 
-    Card(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .testTag("task_card_${task.id}")
-            .border(
-                width = 1.dp,
-                color = borderCol,
-                shape = RoundedCornerShape(24.dp)
-            )
             .clickable { onEdit(task) },
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        color = containerColor,
+        border = BorderStroke(1.dp, borderCol)
     ) {
         Row(
             modifier = Modifier
@@ -230,6 +227,7 @@ fun TaskItemCard(
 
                     // Due Date
                     if (task.dueDate != null) {
+                        val formattedDate = remember(task.dueDate) { dateFormat.format(Date(task.dueDate)) }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp)
@@ -241,7 +239,7 @@ fun TaskItemCard(
                                 modifier = Modifier.size(11.dp)
                             )
                             Text(
-                                text = dateFormat.format(Date(task.dueDate)),
+                                text = formattedDate,
                                 fontSize = 11.sp,
                                 fontFamily = FontFamily.SansSerif,
                                 color = if (isDark) CharcoalWalnutDark.copy(alpha = 0.5f) else NaturalMuted,

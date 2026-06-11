@@ -50,7 +50,7 @@ fun MainScreen(
     val sortOption by viewModel.sortOption.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
-    val itemDateFormat = remember { SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.getDefault()) }
+    val itemDateFormat = remember { SimpleDateFormat("MMM d, yyyy 'at' HH:mm", Locale.getDefault()) }
 
     var showAddEditSheet by remember { mutableStateOf(false) }
     var selectedTaskForEdit by remember { mutableStateOf<Task?>(null) }
@@ -68,12 +68,12 @@ fun MainScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .imePadding()
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp)
-                .imePadding(),
+                .padding(horizontal = 20.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
         ) {
             item {

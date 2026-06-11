@@ -53,6 +53,25 @@ class TaskViewModel(
     private val _recentDates = MutableStateFlow<List<Long>>(emptyList())
     val recentDates: StateFlow<List<Long>> = _recentDates
 
+    private data class FilterState(
+        val status: TaskFilterStatus = TaskFilterStatus.ALL,
+        val priority: TaskFilterPriority = TaskFilterPriority.ALL,
+        val sort: TaskSortOption = TaskSortOption.PRIORITY_DESC,
+        val search: String = "",
+        val dateFilterMs: Long? = null
+    )
+
+    @OptIn(FlowPreview::class)
+    private val filterState = combine(
+        _statusFilter,
+        _priorityFilter,
+        _sortOption,
+        _searchQuery.debounce(300),
+        _dateFilter
+    ) { status, priority, sort, search, dateFilterMs ->
+        FilterState(status, priority, sort, search, dateFilterMs)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FilterState())
+
     init {
         val saved = prefs.getString("recent_dates", null)
         if (!saved.isNullOrBlank()) {
@@ -61,20 +80,15 @@ class TaskViewModel(
     }
 
     // Reactive COMBINED Flow of tasks based on filters, sorting, and search
-    @OptIn(FlowPreview::class)
     val filteredTasks: StateFlow<List<Task>> = combine(
         repository.allTasks,
-        _statusFilter,
-        _priorityFilter,
-        _sortOption,
-        _searchQuery.debounce(300),
-        _dateFilter
-    ) { args: Array<Any?> ->
-        val status = args[1] as TaskFilterStatus
-        val priority = args[2] as TaskFilterPriority
-        val sort = args[3] as TaskSortOption
-        val search = args[4] as String
-        val dateFilterMs = args[5] as Long?
+        filterState
+    ) { allTasks, filter ->
+        val status = filter.status
+        val priority = filter.priority
+        val sort = filter.sort
+        val search = filter.search
+        val dateFilterMs = filter.dateFilterMs
 
         val filterCalendar = dateFilterMs?.let { java.util.Calendar.getInstance().apply { timeInMillis = it } }
         val filterYear = filterCalendar?.get(java.util.Calendar.YEAR)
@@ -82,7 +96,7 @@ class TaskViewModel(
         val taskCalendar = if (dateFilterMs != null) java.util.Calendar.getInstance() else null
 
         // Single pass filtering
-        val filtered = (args[0] as List<Task>).filter { task ->
+        val filtered = allTasks.filter { task ->
             // 1. Status Filter
             if (status == TaskFilterStatus.ACTIVE && task.isCompleted) return@filter false
             if (status == TaskFilterStatus.COMPLETED && !task.isCompleted) return@filter false

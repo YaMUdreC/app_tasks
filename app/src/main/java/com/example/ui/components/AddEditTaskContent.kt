@@ -30,6 +30,7 @@ import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditTaskContent(
     taskToEdit: Task?,
@@ -37,19 +38,21 @@ fun AddEditTaskContent(
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
-    val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy 'at' h:mm a", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy 'at' HH:mm", Locale.getDefault()) }
     val isDark = isSystemInDarkTheme()
 
     var title by remember { mutableStateOf(taskToEdit?.title ?: "") }
     var notes by remember { mutableStateOf(taskToEdit?.notes ?: "") }
     var priority by remember { mutableStateOf(taskToEdit?.priority ?: TaskPriority.MEDIUM) }
     var dueDate by remember { mutableStateOf<Long?>(taskToEdit?.dueDate) }
+    
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var tempDateMillis by remember { mutableStateOf<Long?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
-            .imePadding()
             .padding(horizontal = 24.dp)
             .padding(top = 4.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -166,35 +169,7 @@ fun AddEditTaskContent(
                     shape = RoundedCornerShape(16.dp)
                 )
                 .clickable {
-                    val calendar = Calendar.getInstance()
-                    if (dueDate != null) {
-                        calendar.timeInMillis = dueDate!!
-                    }
-                    DatePickerDialog(
-                        context,
-                        { _, year, month, dayOfMonth ->
-                            TimePickerDialog(
-                                context,
-                                { _, hourOfDay, minute ->
-                                    val selectedCal = Calendar.getInstance()
-                                    selectedCal.set(Calendar.YEAR, year)
-                                    selectedCal.set(Calendar.MONTH, month)
-                                    selectedCal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                                    selectedCal.set(Calendar.HOUR_OF_DAY, hourOfDay)
-                                    selectedCal.set(Calendar.MINUTE, minute)
-                                    selectedCal.set(Calendar.SECOND, 0)
-                                    selectedCal.set(Calendar.MILLISECOND, 0)
-                                    dueDate = selectedCal.timeInMillis
-                                },
-                                calendar.get(Calendar.HOUR_OF_DAY),
-                                calendar.get(Calendar.MINUTE),
-                                false
-                            ).show()
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                    ).show()
+                    showDatePicker = true
                 }
                 .padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -234,6 +209,70 @@ fun AddEditTaskContent(
                         modifier = Modifier.size(16.dp)
                     )
                 }
+            }
+        }
+
+        val pickerColorScheme = MaterialTheme.colorScheme.copy(
+            primary = if (isDark) CozyDarkPrimary else TerracottaClay,
+            surfaceTint = if (isDark) CozyDarkPrimary else TerracottaClay,
+            onSurfaceVariant = if (isDark) CharcoalWalnutDark.copy(alpha = 0.8f) else NaturalText,
+            onPrimaryContainer = if (isDark) CozyDarkSurface else Color.White
+        )
+
+        if (showDatePicker) {
+            val dpState = rememberDatePickerState(initialSelectedDateMillis = dueDate ?: System.currentTimeMillis())
+            MaterialTheme(colorScheme = pickerColorScheme) {
+                DatePickerDialog(
+                    onDismissRequest = { showDatePicker = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            tempDateMillis = dpState.selectedDateMillis
+                            showDatePicker = false
+                            showTimePicker = true
+                        }) { Text("Next") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                    }
+                ) {
+                    DatePicker(state = dpState)
+                }
+            }
+        }
+
+        if (showTimePicker) {
+            val tpState = rememberTimePickerState(
+                initialHour = dueDate?.let { Calendar.getInstance().apply { timeInMillis = it }.get(Calendar.HOUR_OF_DAY) } ?: 12,
+                initialMinute = dueDate?.let { Calendar.getInstance().apply { timeInMillis = it }.get(Calendar.MINUTE) } ?: 0,
+                is24Hour = true
+            )
+            MaterialTheme(colorScheme = pickerColorScheme) {
+                AlertDialog(
+                    onDismissRequest = { showTimePicker = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val cal = Calendar.getInstance()
+                            tempDateMillis?.let { cal.timeInMillis = it }
+                            cal.set(Calendar.HOUR_OF_DAY, tpState.hour)
+                            cal.set(Calendar.MINUTE, tpState.minute)
+                            cal.set(Calendar.SECOND, 0)
+                            cal.set(Calendar.MILLISECOND, 0)
+                            dueDate = cal.timeInMillis
+                            showTimePicker = false
+                        }) { Text("OK") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+                    },
+                    text = {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            TimeInput(state = tpState)
+                        }
+                    }
+                )
             }
         }
 
