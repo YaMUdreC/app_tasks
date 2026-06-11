@@ -29,6 +29,13 @@ import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
+fun isSameDay(millis1: Long, millis2: Long): Boolean {
+    val c1 = Calendar.getInstance().apply { timeInMillis = millis1 }
+    val c2 = Calendar.getInstance().apply { timeInMillis = millis2 }
+    return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) &&
+           c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
+}
+
 @Composable
 fun CozyFilterRow(
     currentStatus: TaskFilterStatus,
@@ -38,9 +45,9 @@ fun CozyFilterRow(
     currentDateFilter: Long?,
     onDateFilterChange: (Long?) -> Unit,
     recentDates: List<Long>,
-    onRecentDateAdded: (Long) -> Unit
+    onRecentDateAdded: (Long) -> Unit,
+    isDark: Boolean
 ) {
-    val isDark = isSystemInDarkTheme()
     val context = LocalContext.current
     val filterDateFormat = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
     
@@ -247,10 +254,8 @@ fun CozyFilterRow(
             }
 
             recentDates.forEach { recentDateMillis ->
-                val isSelected = filterCal != null && run {
-                    taskCal.timeInMillis = recentDateMillis
-                    taskCal.get(Calendar.DAY_OF_YEAR) == filterCal.get(Calendar.DAY_OF_YEAR) &&
-                    taskCal.get(Calendar.YEAR) == filterCal.get(Calendar.YEAR)
+                val isSelected = remember(currentDateFilter, recentDateMillis) {
+                    currentDateFilter != null && isSameDay(recentDateMillis, currentDateFilter)
                 }
 
                 val recentBgCol = if (isSelected) {

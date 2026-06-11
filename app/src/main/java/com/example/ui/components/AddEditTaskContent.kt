@@ -35,11 +35,11 @@ import java.util.*
 fun AddEditTaskContent(
     taskToEdit: Task?,
     onSave: (title: String, notes: String, priority: TaskPriority, dueDate: Long?) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    isDark: Boolean
 ) {
     val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy 'at' HH:mm", Locale.getDefault()) }
-    val isDark = isSystemInDarkTheme()
 
     var title by remember { mutableStateOf(taskToEdit?.title ?: "") }
     var notes by remember { mutableStateOf(taskToEdit?.notes ?: "") }
@@ -212,11 +212,27 @@ fun AddEditTaskContent(
             }
         }
 
+        val pickerTextCol = if (isDark) CharcoalWalnutDark else NaturalHeading
+        val pickerBgCol = if (isDark) CozyDarkSurface else Color.White
+        val pickerSelectedBg = if (isDark) CozyDarkPrimary.copy(alpha = 0.2f) else TerracottaClay.copy(alpha = 0.2f)
+        val pickerSelectedText = if (isDark) CozyDarkPrimary else TerracottaClay
+
         val pickerColorScheme = MaterialTheme.colorScheme.copy(
             primary = if (isDark) CozyDarkPrimary else TerracottaClay,
-            surfaceTint = if (isDark) CozyDarkPrimary else TerracottaClay,
-            onSurfaceVariant = if (isDark) CharcoalWalnutDark.copy(alpha = 0.8f) else NaturalText,
-            onPrimaryContainer = if (isDark) CozyDarkSurface else Color.White
+            onPrimary = if (isDark) CozyDarkSurface else Color.White,
+            primaryContainer = pickerSelectedBg,
+            onPrimaryContainer = pickerSelectedText,
+            surface = pickerBgCol,
+            onSurface = pickerTextCol,
+            surfaceVariant = if (isDark) Color.White.copy(alpha = 0.05f) else NaturalHighBg,
+            onSurfaceVariant = pickerTextCol,
+            secondaryContainer = pickerSelectedBg,
+            onSecondaryContainer = pickerSelectedText,
+            tertiaryContainer = pickerSelectedBg,
+            onTertiaryContainer = pickerSelectedText,
+            surfaceTint = pickerSelectedBg,
+            outline = if (isDark) Color.White.copy(alpha = 0.15f) else ClayBorder,
+            outlineVariant = if (isDark) Color.White.copy(alpha = 0.05f) else ClayBorder
         )
 
         if (showDatePicker) {

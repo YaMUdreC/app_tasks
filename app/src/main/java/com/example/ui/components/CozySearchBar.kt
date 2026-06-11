@@ -27,9 +27,9 @@ import com.example.ui.theme.*
 @Composable
 fun CozySearchBar(
     query: String,
-    onQueryChange: (String) -> Unit
+    onQueryChange: (String) -> Unit,
+    isDark: Boolean
 ) {
-    val isDark = isSystemInDarkTheme()
     var text by remember { mutableStateOf(query) }
 
     LaunchedEffect(query) {

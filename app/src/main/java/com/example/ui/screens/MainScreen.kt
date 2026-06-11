@@ -63,6 +63,7 @@ fun MainScreen(
     } }
 
     val context = LocalContext.current
+    val isDark = isSystemInDarkTheme()
 
     Box(
         modifier = modifier
@@ -85,7 +86,6 @@ fun MainScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val isDark = isSystemInDarkTheme()
                     val todayString = remember {
                         SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
                     }
@@ -180,14 +180,15 @@ fun MainScreen(
                 }
 
                 // Stats Card
-                CozyStatsCard(stats = stats)
+                CozyStatsCard(stats = stats, isDark = isDark)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Search Bar
                 CozySearchBar(
                     query = searchQuery,
-                    onQueryChange = { viewModel.setSearchQuery(it) }
+                    onQueryChange = { viewModel.setSearchQuery(it) },
+                    isDark = isDark
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -201,7 +202,8 @@ fun MainScreen(
                     currentDateFilter = dateFilter,
                     onDateFilterChange = { viewModel.setDateFilter(it) },
                     recentDates = recentDates,
-                    onRecentDateAdded = { viewModel.addRecentDate(it) }
+                    onRecentDateAdded = { viewModel.addRecentDate(it) },
+                    isDark = isDark
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -254,7 +256,8 @@ fun MainScreen(
                         onToggleComplete = onToggleComplete,
                         onDelete = onDelete,
                         onEdit = onEdit,
-                        dateFormat = itemDateFormat
+                        dateFormat = itemDateFormat,
+                        isDark = isDark
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -330,7 +333,8 @@ fun MainScreen(
                     onCancel = {
                         showAddEditSheet = false
                         selectedTaskForEdit = null
-                    }
+                    },
+                    isDark = isDark
                 )
             }
         }

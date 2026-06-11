@@ -39,10 +39,9 @@ fun TaskItemCard(
     onToggleComplete: (Task) -> Unit,
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit,
-    dateFormat: SimpleDateFormat
+    dateFormat: SimpleDateFormat,
+    isDark: Boolean
 ) {
-    val isDark = isSystemInDarkTheme()
-    
     // Custom color mapping based on priority & state
     val containerColor = if (isDark) {
         if (task.isCompleted) {

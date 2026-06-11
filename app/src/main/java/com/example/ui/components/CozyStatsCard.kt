@@ -22,9 +22,8 @@ import com.example.ui.TaskStats
 import com.example.ui.theme.*
 
 @Composable
-fun CozyStatsCard(stats: TaskStats) {
+fun CozyStatsCard(stats: TaskStats, isDark: Boolean) {
     val progress = if (stats.total > 0) stats.completed.toFloat() / stats.total.toFloat() else 0f
-    val isDark = isSystemInDarkTheme()
     
     val bgCol = if (isDark) CozyDarkSurface else NaturalHighBg
     val borderCol = if (isDark) Color.Transparent else MossBorder.copy(alpha = 0.5f)
@@ -33,20 +32,13 @@ fun CozyStatsCard(stats: TaskStats) {
     val progressTrackCol = if (isDark) Color.White.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.5f)
     val progressFillCol = if (isDark) CozyDarkPrimary else MossGreen
     
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp)
-            .border(
-                width = if (isDark) 0.dp else 1.dp,
-                color = borderCol,
-                shape = RoundedCornerShape(28.dp)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = bgCol
-        ),
+            .padding(vertical = 12.dp),
+        color = bgCol,
         shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = if (isDark) null else androidx.compose.foundation.BorderStroke(1.dp, borderCol)
     ) {
         Row(
             modifier = Modifier
